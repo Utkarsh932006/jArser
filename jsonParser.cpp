@@ -25,3 +25,17 @@ fileReader(std::string filePath, std::string& output)
       output.append(inputBuffer);
     }
 }
+
+jsonValue
+jsonParser::parsePrimitive(const std::string& output,
+                           std::string::iterator start,
+                           std::string::iterator end)
+{
+  std::string substr = output.substr(start - output.begin(), end - start);
+  size_t floatPointIndex = substr.find(".");
+
+  if (floatPointIndex >= end - start)
+    return { .i = std::stoi(substr) };
+  else
+    return { .d = std::stod(substr) };
+}
