@@ -2,6 +2,8 @@
 // Created by Utkarsh 31-JULY-2026
 
 #include "jsonParser.hpp"
+#include <cassert>
+#include <utility>
 
 int
 main()
@@ -38,4 +40,56 @@ jsonParser::parsePrimitive(const std::string& output,
     return { .i = std::stoi(substr) };
   else
     return { .d = std::stod(substr) };
+}
+
+std::pair<std::string, jsonValue>
+retrieveKeyValuePair(const std::string& output,
+                     std::string::iterator& inputBuffer)
+{
+  assert(inputBuffer != output.end());
+
+  while (*inputBuffer == ' ' || *inputBuffer == '\n')
+    {
+      inputBuffer++;
+    }
+
+  std::string::iterator currPos;
+  std::string key;
+  jsonValue value;
+
+  if (*inputBuffer == '\"')
+    {
+      currPos++;
+      while (*inputBuffer != '\"')
+        {
+          inputBuffer++;
+        }
+
+      key = output.substr(currPos - output.begin(), inputBuffer - currPos);
+      assert(*(++inputBuffer) == ':');
+      inputBuffer++;
+    }
+
+  return std::pair(key, value);
+}
+
+jsonValue
+jsonParser::parseJsonHelper(const std::string& output,
+                            std::string::iterator& inputBuffer)
+{
+  assert(*inputBuffer == '{');
+  inputBuffer++;
+
+  std::map<std::string, jsonValue>* jsonMap
+      = new std::map<std::string, jsonValue>;
+  do
+    {
+      const auto [key, value] = retrieveKeyValuePair(output, inputBuffer);
+      (*jsonMap)[key] = value;
+    }
+  while (*inputBuffer != '}');
+  {
+    inputBuffer++;
+  }
+  return { .json = jsonMap };
 }
