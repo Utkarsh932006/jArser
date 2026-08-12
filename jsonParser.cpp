@@ -2,6 +2,7 @@
 // Created by Utkarsh 31-JULY-2026
 
 #include "jsonParser.hpp"
+#include <cstddef>
 
 int
 main()
@@ -34,7 +35,7 @@ jsonParser::parsePrimitive(const std::string& output,
   std::string substr = output.substr(start - output.begin(), end - start);
   size_t floatPointIndex = substr.find(".");
 
-  if (floatPointIndex >= end - start)
+  if ((int)floatPointIndex >= end - start)
     return { .i = std::stoi(substr) };
   else
     return { .d = std::stod(substr) };
