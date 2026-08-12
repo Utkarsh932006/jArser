@@ -2,8 +2,6 @@
 // Created by Utkarsh 31-JULY-2026
 
 #include "jsonParser.hpp"
-#include <cassert>
-#include <utility>
 
 int
 main()
@@ -86,10 +84,23 @@ jsonParser::parseJsonHelper(const std::string& output,
     {
       const auto [key, value] = retrieveKeyValuePair(output, inputBuffer);
       (*jsonMap)[key] = value;
+
+      while (*inputBuffer == ' ' || *inputBuffer == '\n')
+        {
+          inputBuffer++;
+        }
     }
   while (*inputBuffer != '}');
-  {
-    inputBuffer++;
-  }
+  inputBuffer++;
   return { .json = jsonMap };
+}
+
+jsonValue
+jsonParser::parseJson(const std::string& filepath)
+{
+  std::string text;
+  fileReader(filepath, text);
+
+  std::string::iterator start = text.begin();
+  return parseJsonHelper(text, start);
 }

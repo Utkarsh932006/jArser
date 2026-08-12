@@ -26,4 +26,6 @@ jsonValue parseJsonHelper(const std::string&, std::string::iterator&);
 
 std::pair<std::string, jsonValue> retrieveKeyValuePair(const std::string&,
                                                        std::string::iterator&);
+
+jsonValue parseJson(const std::string&);
 }
