@@ -41,8 +41,8 @@ jsonParser::parsePrimitive(const std::string& output,
 }
 
 std::pair<std::string, jsonValue>
-retrieveKeyValuePair(const std::string& output,
-                     std::string::iterator& inputBuffer)
+jsonParser::retrieveKeyValuePair(const std::string& output,
+                                 std::string::iterator& inputBuffer)
 {
   assert(inputBuffer != output.end());
 
@@ -51,9 +51,9 @@ retrieveKeyValuePair(const std::string& output,
       inputBuffer++;
     }
 
-  std::string::iterator currPos;
+  std::string::iterator currPos = inputBuffer;
   std::string key;
-  jsonValue value;
+  jsonValue value{};
 
   if (*inputBuffer == '\"')
     {
