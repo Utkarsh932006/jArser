@@ -13,6 +13,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Build
-        run: make
+        run: make clean && make
       - name: Run checks
         run: make check
