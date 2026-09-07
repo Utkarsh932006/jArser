@@ -3,29 +3,40 @@
 
 #include <map>
 #include <string>
-#include <cassert>
-#include <fstream>
-#include <iostream>
-#include <iterator>
-#include <utility>
+#include <variant>
+#include <vector>
 
-union jsonValue
+struct jsonValue;
+using jsonObject = std::map<std::string, jsonValue>;
+using jsonArray = std::vector<jsonValue>;
+
+using jsonData = std::variant<std::nullptr_t,
+                              bool,
+                              int64_t,
+                              double,
+                              std::string,
+                              jsonArray,
+                              jsonObject>;
+
+struct jsonValue
 {
-  int i;
-  double d;
-  std::map<std::string, jsonValue>* json;
+  jsonData data;
 };
 
-void fileReader(std::string filePath, std::string& output);
+std::string
+readFile(const std::string& filePath);
 
-namespace jsonParser
-{
-jsonValue parsePrimitive(const std::string&, std::string::iterator,
-                         std::string::iterator);
-jsonValue parseJsonHelper(const std::string&, std::string::iterator&);
+namespace jsonParser {
+jsonValue
+parsePrimitive(const std::string&,
+               std::string::iterator,
+               std::string::iterator);
+jsonValue
+parseJsonHelper(const std::string&, std::string::iterator&);
 
-std::pair<std::string, jsonValue> retrieveKeyValuePair(const std::string&,
-                                                       std::string::iterator&);
+std::pair<std::string, jsonValue>
+retrieveKeyValuePair(const std::string&, std::string::iterator&);
 
-jsonValue parseJson(const std::string&);
+jsonValue
+parseJson(const std::string&);
 }

@@ -2,28 +2,32 @@
 // Created by Utkarsh 31-JULY-2026
 
 #include "jsonParser.hpp"
+#include <cstdlib>
+#include <fstream>
+#include <iostream>
+#include <sstream>
+#include <string>
 
 int
-main()
+main(int argc, char* argv[])
 {
-  std::string output;
+  if (argc != 2)
+    return EXIT_FAILURE;
 
-  fileReader("jsonExample.json", output);
+  std::string output;
+  readFile(argv[1]);
   std::cout << output << "\n";
 
   return 0;
 }
 
-void
-fileReader(std::string filePath, std::string& output)
+std::string
+readFile(std::string filePath)
 {
-  std::ifstream file(filePath);
-  std::string inputBuffer;
-
-  while (std::getline(file, inputBuffer))
-    {
-      output.append(inputBuffer);
-    }
+  std::ifstream file(filePath, std::ios::in | std::ios::binary);
+  std::ostringstream inputBuffer;
+  inputBuffer << file.rdbuf();
+  return inputBuffer.str();
 }
 
 jsonValue
@@ -46,27 +50,24 @@ jsonParser::retrieveKeyValuePair(const std::string& output,
 {
   assert(inputBuffer != output.end());
 
-  while (*inputBuffer == ' ' || *inputBuffer == '\n')
-    {
-      inputBuffer++;
-    }
+  while (*inputBuffer == ' ' || *inputBuffer == '\n') {
+    inputBuffer++;
+  }
 
   std::string::iterator currPos = inputBuffer;
   std::string key;
   jsonValue value{};
 
-  if (*inputBuffer == '\"')
-    {
-      currPos++;
-      while (*inputBuffer != '\"')
-        {
-          inputBuffer++;
-        }
-
-      key = output.substr(currPos - output.begin(), inputBuffer - currPos);
-      assert(*(++inputBuffer) == ':');
+  if (*inputBuffer == '\"') {
+    currPos++;
+    while (*inputBuffer != '\"') {
       inputBuffer++;
     }
+
+    key = output.substr(currPos - output.begin(), inputBuffer - currPos);
+    assert(*(++inputBuffer) == ':');
+    inputBuffer++;
+  }
 
   return std::pair(key, value);
 }
@@ -78,19 +79,16 @@ jsonParser::parseJsonHelper(const std::string& output,
   assert(*inputBuffer == '{');
   inputBuffer++;
 
-  std::map<std::string, jsonValue>* jsonMap
-      = new std::map<std::string, jsonValue>;
-  do
-    {
-      const auto [key, value] = retrieveKeyValuePair(output, inputBuffer);
-      (*jsonMap)[key] = value;
+  std::map<std::string, jsonValue>* jsonMap =
+    new std::map<std::string, jsonValue>;
+  do {
+    const auto [key, value] = retrieveKeyValuePair(output, inputBuffer);
+    (*jsonMap)[key] = value;
 
-      while (*inputBuffer == ' ' || *inputBuffer == '\n')
-        {
-          inputBuffer++;
-        }
+    while (*inputBuffer == ' ' || *inputBuffer == '\n') {
+      inputBuffer++;
     }
-  while (*inputBuffer != '}');
+  } while (*inputBuffer != '}');
   inputBuffer++;
   return { .json = jsonMap };
 }
@@ -99,7 +97,7 @@ jsonValue
 jsonParser::parseJson(const std::string& filepath)
 {
   std::string text;
-  fileReader(filepath, text);
+  readFile(filepath, text);
 
   std::string::iterator start = text.begin();
   return parseJsonHelper(text, start);
