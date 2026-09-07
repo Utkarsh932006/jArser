@@ -27,7 +27,7 @@ main(int argc, char* argv[])
 }
 
 std::string
-readFile(std::string filePath)
+readFile(const std::string& filePath)
 {
   std::ifstream file(filePath, std::ios::in | std::ios::binary);
   std::ostringstream inputBuffer;
@@ -40,7 +40,7 @@ jsonParser::parsePrimitive(const std::string& source,
                            std::string::iterator start,
                            std::string::iterator end)
 {
-  std::string_view substr(&*start, end - start);
+  std::string_view substr(start, end);
   size_t floatPointIndex = substr.find('.');
 
   if (floatPointIndex == std::string_view::npos) {
@@ -118,7 +118,7 @@ jsonValue
 jsonParser::parseJson(const std::string& filepath)
 {
   std::string text;
-  readFile(filepath, text);
+  readFile(filepath);
 
   std::string::iterator start = text.begin();
   return parseJsonHelper(text, start);
