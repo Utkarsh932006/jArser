@@ -2,11 +2,16 @@
 // Created by Utkarsh 31-JULY-2026
 
 #include "jsonParser.hpp"
+#include <cassert>
+#include <charconv>
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
 #include <sstream>
+#include <stdexcept>
 #include <string>
+#include <string_view>
+#include <system_error>
 
 int
 main(int argc, char* argv[])
@@ -31,17 +36,33 @@ readFile(std::string filePath)
 }
 
 jsonValue
-jsonParser::parsePrimitive(const std::string& output,
+jsonParser::parsePrimitive(const std::string& source,
                            std::string::iterator start,
                            std::string::iterator end)
 {
-  std::string substr = output.substr(start - output.begin(), end - start);
-  size_t floatPointIndex = substr.find(".");
+  std::string_view substr(&*start, end - start);
+  size_t floatPointIndex = substr.find('.');
 
-  if ((int)floatPointIndex >= end - start)
-    return { .i = std::stoi(substr) };
-  else
-    return { .d = std::stod(substr) };
+  if (floatPointIndex == std::string_view::npos) {
+    int value{ 0 };
+    auto [ptr, ec] =
+      std::from_chars(substr.data(), substr.data() + substr.size(), value);
+
+    if (ec != std::errc())
+      throw std::invalid_argument("Failed to parse integer primitive value");
+    else
+      return jsonValue{ .data = value };
+
+  } else {
+    double value{ 0.0 };
+    auto [ptr, ec] =
+      std::from_chars(substr.data(), substr.data() + substr.size(), value);
+
+    if (ec != std::errc())
+      throw std::invalid_argument("Failed to parse double primitive value");
+    else
+      return jsonValue{ .data = value };
+  }
 }
 
 std::pair<std::string, jsonValue>
