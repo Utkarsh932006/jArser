@@ -1,30 +1,35 @@
 # jArser
 
-`jArser` is a small C++17 project exploring how a JSON parser is built from
-first principles. It currently reads the bundled JSON example and writes its
-contents to standard output; the parsing API is the foundation for the next
-stage of the project.
+`jArser` is a lightweight, modern C++23 JSON parser and AST builder developed
+from first principles. It provides memory-safe, recursive JSON parsing into a
+type-safe AST using standard vocabulary types (`std::variant`, `std::optional`,
+`std::string_view`), without external dependencies.
 
-> Status: experimental. This is a learning project, not yet a production JSON
-> library.
+> Status: Complete. Fully functional first-principles C++23 JSON parser and AST builder.
+
+## Features
+
+- **Type-Safe Recursive AST**: Backed by `std::variant` (`jsonData`), supporting `null` (`std::nullptr_t`), booleans, `int64_t`, `double`, `std::string`, `jsonArray`, and `jsonObject`.
+- **Zero Memory Leaks**: Uses standard containers (`std::map`, `std::vector`) and value semantics instead of raw pointers or manual heap allocations.
+- **Fast Primitive Parsing**: Employs `std::from_chars` for high-performance, allocation-free integer and floating-point parsing.
+- **Idiomatic Error Handling**: Functions return `std::optional` to convey parse absence or syntax errors cleanly without throwing exceptions.
+- **AST Pretty-Printing**: Includes `jsonParser::printJson()` powered by `std::visit` to format and display the parsed AST.
 
 ## Quick start
 
 ### Requirements
 
-- A C++17-capable compiler (the default is `g++`)
-- GNU Make or a compatible `make` for the automated install and cleaning.
+- A C++23-capable compiler (e.g. GCC 13+ or Clang 16+)
+- GNU Make or compatible `make` utility
 
 ### Build and run
 
 ```sh
 make
-./jsonParser
+./jsonParser jsonExample.json
 ```
 
-The executable reads [`jsonExample.json`](jsonExample.json) from the current
-directory and prints its contents. Run it from the repository root so that the
-example file can be found.
+The executable accepts a file path as an argument. If no argument is passed, it displays usage instructions.
 
 ### Check and clean
 
@@ -33,59 +38,36 @@ make check
 make clean
 ```
 
-`make check` builds the program if needed, then runs it against the bundled
-example. `make clean` removes the generated `jsonParser` executable.
+`make check` compiles the program with strict warnings (`-Wall -Wextra -Werror -Wconversion`) and executes it against the bundled [`jsonExample.json`](jsonExample.json).
 
-To choose a different compiler or add flags, pass them to `make`:
+To test with a different compiler (e.g. Clang):
 
 ```sh
-make CXX=clang++ CXXFLAGS='-std=c++17 -O0 -g -Wall -Wextra'
+make CXX=clang++
 ```
 
 ## Project layout
 
 | Path | Purpose |
 | --- | --- |
-| [`jsonParser.cpp`](jsonParser.cpp) | Program entry point and parser implementation in progress |
-| [`jsonParser.hpp`](jsonParser.hpp) | Parser declarations and the `jsonValue` representation |
-| [`jsonExample.json`](jsonExample.json) | Input used by the example program and `make check` |
-| [`Makefile`](Makefile) | Build, check, and clean commands |
-| [`.github/workflows/c-cpp.yml`](.github/workflows/c-cpp.yml) | GitHub Actions build and check workflow |
+| [`jsonParser.cpp`](jsonParser.cpp) | CLI entry point, recursive parser, and AST printer implementation |
+| [`jsonParser.hpp`](jsonParser.hpp) | Type-safe AST structures (`jsonValue`, `jsonData`) and parser API |
+| [`jsonExample.json`](jsonExample.json) | Example JSON payload containing nested structures used in tests |
+| [`Makefile`](Makefile) | Strict C++23 compilation, test (`check`), and clean recipes |
+| [`.github/workflows/c-cpp.yml`](.github/workflows/c-cpp.yml) | GitHub Actions CI workflow triggered on pushes and PRs to `main` |
 
-## Current scope and limitations
+## Supported JSON Types
 
-The repository already contains an initial parser interface:
-
-- `fileReader` loads a file into a string.
-- `jsonParser::parsePrimitive` begins distinguishing integer and floating-point
-  values.
-- `jsonParser::parseJson` and its helpers sketch object parsing.
-
-The parser is not complete yet. In particular, it does not currently provide
-full JSON tokenization, validation, arrays, strings with escape sequences,
-booleans, `null`, robust error reporting, or a public result that the example
-program displays. Avoid using it with untrusted or arbitrary JSON until those
-areas are implemented and tested.
+| JSON Type | C++ Representation in `jsonData` |
+| --- | --- |
+| `null` | `std::nullptr_t` |
+| `true` / `false` | `bool` |
+| Integer | `int64_t` |
+| Floating point | `double` |
+| String (`"..."`) | `std::string` |
+| Array (`[...]`) | `std::vector<jsonValue>` (`jsonArray`) |
+| Object (`{...}`) | `std::map<std::string, jsonValue>` (`jsonObject`) |
 
 ## Continuous integration
 
-GitHub Actions runs on pushes and pull requests targeting `main`. The workflow
-uses the same commands documented above:
-
-```sh
-make
-make check
-```
-
-Keeping the local and CI commands identical makes failures straightforward to
-reproduce before opening a pull request.
-
-## Next steps
-
-Useful directions for the project include:
-
-1. Add a tokenizer with source locations and useful parse errors.
-2. Represent all JSON value types safely (for example with `std::variant`).
-3. Parse nested objects and arrays recursively.
-4. Add focused unit tests for valid input, malformed input, and edge cases.
-5. Let the executable accept a JSON file path as a command-line argument.
+GitHub Actions runs on every push and pull request targeting `main`. The pipeline builds with `-std=c++23` and executes `make check` on Ubuntu runners.
