@@ -2,6 +2,7 @@
 // Created by Utkarsh 31-JULY-2026
 
 #include <map>
+#include <optional>
 #include <string>
 #include <variant>
 #include <vector>
@@ -27,16 +28,18 @@ std::string
 readFile(const std::string& filePath);
 
 namespace jsonParser {
-jsonValue
-parsePrimitive(const std::string&,
-               std::string::iterator,
-               std::string::iterator);
-jsonValue
+std::optional<jsonValue> parsePrimitive(std::string::iterator,
+                                        std::string::iterator);
+
+std::optional<jsonValue>
 parseJsonHelper(const std::string&, std::string::iterator&);
 
-std::pair<std::string, jsonValue>
+std::optional<std::pair<std::string, jsonValue>>
 retrieveKeyValuePair(const std::string&, std::string::iterator&);
 
-jsonValue
+std::optional<jsonValue>
 parseJson(const std::string&);
+
+void
+printJson(const jsonValue&, int indent = 0);
 }
