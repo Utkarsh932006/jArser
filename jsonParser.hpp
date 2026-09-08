@@ -40,6 +40,9 @@ retrieveKeyValuePair(const std::string&, std::string::iterator&);
 std::optional<jsonValue>
 parseJson(const std::string&);
 
+std::optional<jsonValue>
+parseValue(const std::string&, std::string::iterator&);
+
 void
 printJson(const jsonValue&, int indent = 0);
 }

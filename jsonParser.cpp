@@ -17,12 +17,23 @@
 int
 main(int argc, char* argv[])
 {
-  if (argc != 2)
+  if (argc < 2) {
+    std::cerr << "Error: No input file specified.\n"
+              << "Usage: ./json_parser <filepath>\n"
+              << "Tip: Try running it with the provided example: ./json_parser "
+                 "jsonExample.json\n";
     return EXIT_FAILURE;
+  }
+  const std::string filepath = argv[1];
 
-  std::string output;
-  readFile(argv[1]);
-  std::cout << output << "\n";
+  auto parsed = jsonParser::parseJson(filepath);
+  if (!parsed) {
+    std::cerr << "Failed to parse JSON: " << filepath << "\n";
+    return EXIT_FAILURE;
+  }
+
+  jsonParser::printJson(*parsed);
+  std::cout << "\n";
 
   return EXIT_SUCCESS;
 }
@@ -41,14 +52,14 @@ jsonParser::parsePrimitive(std::string::iterator start,
                            std::string::iterator end)
 {
   std::string_view substr(start, end);
-  size_t floatPointIndex = substr.find('.');
+  size_t floatPointIndex = substr.find_first_of(".eE");
 
   if (floatPointIndex == std::string_view::npos) {
-    int value{ 0 };
+    int64_t value{ 0 };
     auto [ptr, ec] =
       std::from_chars(substr.data(), substr.data() + substr.size(), value);
 
-    if (ec != std::errc())
+    if (ec != std::errc() || ptr != substr.data() + substr.size())
       return std::nullopt;
     else
       return jsonValue{ .data = value };
@@ -58,11 +69,94 @@ jsonParser::parsePrimitive(std::string::iterator start,
     auto [ptr, ec] =
       std::from_chars(substr.data(), substr.data() + substr.size(), value);
 
-    if (ec != std::errc())
+    if (ec != std::errc() || ptr != substr.data() + substr.size())
       return std::nullopt;
     else
       return jsonValue{ .data = value };
   }
+}
+
+std::optional<jsonValue>
+jsonParser::parseValue(const std::string& output,
+                       std::string::iterator& inputBuffer)
+{
+  while (inputBuffer != output.end() &&
+         (*inputBuffer == ' ' || *inputBuffer == '\n' || *inputBuffer == '\t' ||
+          *inputBuffer == '\r')) {
+    ++inputBuffer;
+  }
+
+  if (inputBuffer == output.end())
+    return std::nullopt;
+
+  if (*inputBuffer == '{')
+    return parseJsonHelper(output, inputBuffer);
+
+  if (*inputBuffer == '\"') {
+    ++inputBuffer;
+    auto start = inputBuffer;
+    while (inputBuffer != output.end() && *inputBuffer != '\"') {
+      ++inputBuffer;
+    }
+    if (inputBuffer == output.end())
+      return std::nullopt;
+
+    std::string str(start, inputBuffer);
+    ++inputBuffer;
+    return jsonValue{ .data = std::move(str) };
+  }
+
+  if (*inputBuffer == '[') {
+    ++inputBuffer;
+    jsonArray arr;
+
+    while (inputBuffer != output.end() && *inputBuffer != ']') {
+      while (inputBuffer != output.end() &&
+             (*inputBuffer == ' ' || *inputBuffer == '\n' ||
+              *inputBuffer == '\t' || *inputBuffer == '\r')) {
+        ++inputBuffer;
+      }
+      if (inputBuffer != output.end() && *inputBuffer == ']')
+        break;
+
+      auto elem = parseValue(output, inputBuffer);
+      if (!elem)
+        return std::nullopt;
+
+      arr.push_back(std::move(*elem));
+
+      while (inputBuffer != output.end() &&
+             (*inputBuffer == ' ' || *inputBuffer == '\n' ||
+              *inputBuffer == '\t' || *inputBuffer == '\r')) {
+        ++inputBuffer;
+      }
+      if (inputBuffer != output.end() && *inputBuffer == ',')
+        ++inputBuffer;
+    }
+
+    if (inputBuffer == output.end() || *inputBuffer != ']')
+      return std::nullopt;
+    ++inputBuffer;
+
+    return jsonValue{ .data = std::move(arr) };
+  }
+
+  auto start = inputBuffer;
+  while (inputBuffer != output.end() && *inputBuffer != ',' &&
+         *inputBuffer != '}' && *inputBuffer != ']' && *inputBuffer != ' ' &&
+         *inputBuffer != '\n' && *inputBuffer != '\t' && *inputBuffer != '\r') {
+    ++inputBuffer;
+  }
+
+  std::string_view token(start, inputBuffer);
+  if (token == "null")
+    return jsonValue{ .data = nullptr };
+  if (token == "true")
+    return jsonValue{ .data = true };
+  if (token == "false")
+    return jsonValue{ .data = false };
+
+  return parsePrimitive(start, inputBuffer);
 }
 
 std::optional<std::pair<std::string, jsonValue>>
@@ -102,18 +196,7 @@ jsonParser::retrieveKeyValuePair(const std::string& output,
 
   skipWhitespace();
 
-  std::optional<jsonValue> val;
-  if (inputBuffer != output.end() && *inputBuffer == '{') {
-    val = parseJsonHelper(output, inputBuffer);
-  } else {
-    auto valStart = inputBuffer;
-    while (inputBuffer != output.end() && *inputBuffer != ',' &&
-           *inputBuffer != '}' && *inputBuffer != '\n') {
-      ++inputBuffer;
-    }
-    val = parsePrimitive(valStart, inputBuffer);
-  }
-
+  auto val = parseValue(output, inputBuffer);
   if (!val)
     return std::nullopt;
 
@@ -132,7 +215,8 @@ jsonParser::parseJsonHelper(const std::string& output,
 
   while (inputBuffer != output.end() && *inputBuffer != '}') {
     while (inputBuffer != output.end() &&
-           (*inputBuffer == ' ' || *inputBuffer == '\n')) {
+           (*inputBuffer == ' ' || *inputBuffer == '\n' ||
+            *inputBuffer == '\t' || *inputBuffer == '\r')) {
       ++inputBuffer;
     }
     if (inputBuffer != output.end() && *inputBuffer == '}')
@@ -146,7 +230,8 @@ jsonParser::parseJsonHelper(const std::string& output,
     jsonMap.emplace(std::move(key), std::move(val));
 
     while (inputBuffer != output.end() &&
-           (*inputBuffer == ' ' || *inputBuffer == '\n')) {
+           (*inputBuffer == ' ' || *inputBuffer == '\n' ||
+            *inputBuffer == '\t' || *inputBuffer == '\r')) {
       ++inputBuffer;
     }
     if (inputBuffer != output.end() && *inputBuffer == ',')
@@ -163,11 +248,12 @@ jsonParser::parseJsonHelper(const std::string& output,
 std::optional<jsonValue>
 jsonParser::parseJson(const std::string& filepath)
 {
-  std::string text;
-  readFile(filepath);
+  std::string text = readFile(filepath);
+  if (text.empty())
+    return std::nullopt;
 
   std::string::iterator start = text.begin();
-  return parseJsonHelper(text, start);
+  return parseValue(text, start);
 }
 
 void
@@ -181,7 +267,8 @@ jsonParser::printJson(const jsonValue& val, int indent)
         std::cout << "null";
       } else if constexpr (std::is_same_v<T, bool>) {
         std::cout << (arg ? "true" : "false");
-      } else if constexpr (std::is_same_v<T, int64_t> || std::is_same_v<T, double>) {
+      } else if constexpr (std::is_same_v<T, int64_t> ||
+                           std::is_same_v<T, double>) {
         std::cout << arg;
       } else if constexpr (std::is_same_v<T, std::string>) {
         std::cout << '\"' << arg << '\"';
@@ -218,4 +305,3 @@ jsonParser::printJson(const jsonValue& val, int indent)
     },
     val.data);
 }
-
