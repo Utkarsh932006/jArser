@@ -21,7 +21,7 @@ using jsonData = std::variant<std::nullptr_t,
 
 struct jsonValue
 {
-  jsonData data;
+  jsonData data{};
 };
 
 std::string
